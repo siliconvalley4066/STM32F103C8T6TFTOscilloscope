@@ -1,6 +1,7 @@
 /*
- * STM32F103C8T6 Oscilloscope using a 320x240 TFT and Web Version 0.10
- * The max realtime sampling rates are 250ksps with 2 channels and 500ksps with a channel.
+ * STM32F103C8T6 Oscilloscope using a 320x240 TFT Version 1.00
+ * The max DMA sampling rates is 2.57Msps with 2 channels.
+ * The max realtime sampling rates is 125ksps with 2 channels.
  * + Pulse Generator
  * + PWM DDS Function Generator (23 waveforms)
  * Copyright (c) 2023, Siliconvalley4066
@@ -83,12 +84,12 @@ const int TRIG_E_UP = 0;
 const int TRIG_E_DN = 1;
 #define RATE_MIN 0
 #define RATE_MAX 18
-#define RATE_DMA 0
-#define RATE_DUAL 1
+#define RATE_DMA 3
+#define RATE_DUAL 0
 #define RATE_ROLL 12
 #define ITEM_MAX 29
-const char Rates[19][5] PROGMEM = {"50us", "100u", "200u", "300u", "400u", "500u", " 1ms", " 2ms", " 5ms", "10ms", "20ms", "50ms", "100m", "200m", "0.5s", " 1s ", " 2s ", " 5s ", " 10s"};
-const unsigned long HREF[] PROGMEM = {20, 40, 80, 120, 160, 200, 400, 800, 2000, 4000, 8000, 20000, 40000, 80000, 200000, 400000, 800000, 2000000, 4000000, 8000000};
+const char Rates[19][5] PROGMEM = {"9.7u", "18u ", "57u ", "94u ", "200u", "500u", " 1ms", " 2ms", " 5ms", "10ms", "20ms", "50ms", "100m", "200m", "0.5s", " 1s ", " 2s ", " 5s ", " 10s"};
+const unsigned long HREF[] PROGMEM = {4, 9, 23, 38, 80, 200, 400, 800, 2000, 4000, 8000, 20000, 40000, 80000, 200000, 400000, 800000, 2000000, 4000000, 8000000};
 #define RANGE_MIN 0
 #define RANGE_MAX 4
 #define VRF 3.3
@@ -101,7 +102,8 @@ bool Start = true;  // Start sampling
 byte item = 0;      // Default item
 short ch0_off = 0, ch1_off = 400;
 byte data[4][SAMPLES];                  // keep twice of the number of channels to make it a double buffer
-uint16_t cap_buf[NSAMP], cap_buf1[NSAMP/2];
+uint32_t cap_buf32[NSAMP / 2], cap_buf33[NSAMP / 4];
+uint16_t *cap_buf = (uint16_t *)&cap_buf32, *cap_buf1 = (uint16_t *)&cap_buf33;
 byte odat00, odat01, odat10, odat11;    // old data buffer for erase
 byte sample=0;                          // index for double buffer
 bool fft_mode = false, pulse_mode = false, dds_mode = false, fcount_mode = false;
@@ -168,34 +170,9 @@ void setup(){
   if (dds_mode)
     dds_setup();
   orate = RATE_DMA + 1;                 // old rate befor change
+  adc_calibrate(ADC1);
+  adc_calibrate(ADC2);
   adc_set_speed();
-}
-
-void adc_set_speed(void) {
-  if (rate < 1)
-    adc_speed_fastest();
-  else if (rate < 6)
-    adc_speed_fast();
-  else
-    adc_speed_normal();
-}
-
-void adc_speed_normal(void) {
-  adc_set_prescaler(ADC_PRE_PCLK2_DIV_6);
-  adc_set_sample_rate(PIN_MAP[PA0].adc_device,ADC_SMPR_55_5);
-  adc_set_sample_rate(PIN_MAP[PA1].adc_device,ADC_SMPR_55_5);
-}
-
-void adc_speed_fast(void) {
-  adc_set_prescaler(ADC_PRE_PCLK2_DIV_2);
-  adc_set_sample_rate(PIN_MAP[PA0].adc_device,ADC_SMPR_7_5);
-  adc_set_sample_rate(PIN_MAP[PA1].adc_device,ADC_SMPR_7_5);
-}
-
-void adc_speed_fastest(void) {
-  adc_set_prescaler(ADC_PRE_PCLK2_DIV_2);
-  adc_set_sample_rate(PIN_MAP[PA0].adc_device,ADC_SMPR_1_5);
-  adc_set_sample_rate(PIN_MAP[PA1].adc_device,ADC_SMPR_1_5);
 }
 
 #ifdef DOT_GRID
@@ -444,7 +421,7 @@ void loop() {
 
   timeExec = 100;
   digitalWrite(LED_BUILTIN, LED_ON);
-  if (rate > -1) {
+  if (rate > RATE_DMA) {
     set_trigger_ad();
     auto_time = pow(10, rate / 3) + 5;
     if (trig_mode != TRIG_SCAN) {
@@ -471,7 +448,7 @@ void loop() {
       }
     }
   }
-  
+
   // sample and draw depending on the sampling rate
   if (rate < RATE_ROLL && Start) {
     // change the index for the double buffer
@@ -480,11 +457,9 @@ void loop() {
     else
       sample = 0;
 
-    if (rate == 0) {        // DMA, channel 0 only 2us sampling (500ksps)
-      sample_us(HREF[rate] / 10);
-    } else if (rate <= RATE_DMA) {  // DMA, dual channel 4us,8us sampling (250ksps,125ksps)
-      sample_dual_us(HREF[rate] / 10);
-    } else if (rate > RATE_DMA && rate <= 8) {  // dual channel 12us, 16us, 20us, 40us, 80us, 200us sampling
+    if (rate <= RATE_DMA) {   // DMA, min 0.39us sampling (2.57Msps)
+      takeSamples();
+    } else if (rate <= 8) {   // dual channel 8us, 20us, 40us, 80us, 200us sampling
       sample_dual_us(HREF[rate] / 10);
     } else {                // dual channel 0.4ms, 0.8ms, 2ms sampling
       sample_dual_ms(HREF[rate] / 10);
