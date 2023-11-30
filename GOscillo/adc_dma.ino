@@ -15,7 +15,7 @@ void dmaadc_setup() {   //Setup ADC peripherals for interleaved continuous mode.
   adc_set_reg_seqlen(ADC2, 1);
   ADC1->regs->SQR3 = PIN_MAP[ad_ch0].adc_channel;
   ADC2->regs->SQR3 = PIN_MAP[ad_ch1].adc_channel;
-  ADC1->regs->CR1 |= 0x60000;         // set ADC2 in regular simultaneous mode
+  ADC1->regs->CR1 |= 0x60000;         // set ADC1 in regular simultaneous mode
   ADC2->regs->CR1 |= 0x60000;         // set ADC2 in regular simultaneous mode
   ADC1->regs->CR2 |= ADC_CR2_CONT | ADC_CR2_SWSTART;  // ADC 1 continuos
   ADC2->regs->CR2 |= ADC_CR2_CONT | ADC_CR2_SWSTART;  // ADC 2 continuos
