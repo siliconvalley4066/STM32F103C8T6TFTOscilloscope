@@ -1,5 +1,5 @@
 /*
- * STM32F103C8T6 Oscilloscope using a 320x240 TFT Version 1.01
+ * STM32F103C8T6 Oscilloscope using a 320x240 TFT Version 1.02
  * The max DMA sampling rates is 2.57Msps with 2 channels.
  * The max realtime sampling rates is 125ksps with 2 channels.
  * + Pulse Generator
@@ -13,14 +13,15 @@
  */
 
 #include <SPI.h>
-#include "Adafruit_GFX.h"
-#include <Adafruit_ILI9341.h>
+#include "Adafruit_GFX_AS.h"
+#include <Adafruit_ILI9341_STM.h>
 #include <XPT2046_Touchscreen.h>
 
 #define TFT_CS         PB1
 #define TFT_DC         PB10
 #define TFT_RST        PB11
-Adafruit_ILI9341 display = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST); // Mosi - PA7, SCK - PA5
+Adafruit_ILI9341_STM display = Adafruit_ILI9341_STM(TFT_CS, TFT_DC, TFT_RST); // Mosi - PA7, SCK - PA5
+SPISettings TFT_SPISet(SAFE_FREQ, MSBFIRST, SPI_MODE0, DATA_SIZE_16BIT);
 
 // This is calibration data for the raw touch data to the screen coordinates
 #define TS_MINX 3900

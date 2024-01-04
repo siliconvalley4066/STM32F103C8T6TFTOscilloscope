@@ -5,10 +5,10 @@
 
 #include <STM32ADC.h>
 
-#define ADC_CR1_FASTINT 0x70000         // Fast interleave mode DUAL MODE bits 19-16
+//#define ADC_CR1_FASTINT 0x70000         // Fast interleave mode DUAL MODE bits 19-16
 volatile static bool dma1_ch1_Active;   // End of DMA indication
 float samplingTime = 0;
-STM32ADC myADC1(ADC1), myADC2(ADC1);
+STM32ADC myADC1(ADC1), myADC2(ADC2);
 
 void dmaadc_setup() {   //Setup ADC peripherals for interleaved continuous mode.
   adc_set_reg_seqlen(ADC1, 1);
@@ -16,7 +16,7 @@ void dmaadc_setup() {   //Setup ADC peripherals for interleaved continuous mode.
   ADC1->regs->SQR3 = PIN_MAP[ad_ch0].adc_channel;
   ADC2->regs->SQR3 = PIN_MAP[ad_ch1].adc_channel;
   ADC1->regs->CR1 |= 0x60000;         // set ADC1 in regular simultaneous mode
-  ADC2->regs->CR1 |= 0x60000;         // set ADC2 in regular simultaneous mode
+//  ADC2->regs->CR1 |= 0x60000;         // set ADC2 in regular simultaneous mode
   ADC1->regs->CR2 |= ADC_CR2_CONT | ADC_CR2_SWSTART;  // ADC 1 continuos
   ADC2->regs->CR2 |= ADC_CR2_CONT | ADC_CR2_SWSTART;  // ADC 2 continuos
 }
@@ -70,9 +70,9 @@ void adc_set_speed(void) {
       break;
     case 4: 
     case 5:
-      adc_set_prescaler(ADC_PRE_PCLK2_DIV_2);
-      myADC1.setSampleRate(ADC_SMPR_7_5);
-      myADC2.setSampleRate(ADC_SMPR_7_5);
+      adc_set_prescaler(ADC_PRE_PCLK2_DIV_4);
+      myADC1.setSampleRate(ADC_SMPR_13_5);
+      myADC2.setSampleRate(ADC_SMPR_13_5);
       break;
     default:
       adc_set_prescaler(ADC_PRE_PCLK2_DIV_6);

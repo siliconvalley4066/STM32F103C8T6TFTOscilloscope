@@ -32,6 +32,7 @@ void CheckTouch() {
   // Pressed will be set true is there is a valid touch on the screen
   if (!ts.touched()) return;
   TS_Point p = ts.getPoint();
+  SPI.beginTransaction(TFT_SPISet);
   x = map(p.x, TS_MINX, TS_MAXX, 0, display.width());
   y = map(p.y, TS_MINY, TS_MAXY, 0, display.height());
   if (y < 20) {
@@ -548,6 +549,7 @@ void CheckSW() {
 
 #ifndef NOLCD
   CheckTouch();
+  SPI.beginTransaction(TFT_SPISet);
 #endif
   if (wrate != 0) {
     updown_rate(wrate);
