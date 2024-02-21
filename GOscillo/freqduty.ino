@@ -43,8 +43,6 @@ void dataAnalize(int ch) {    // 波形の分析 get various information from wa
 //  dataRms = sqrt(sum / SAMPLES);          // 実効値の10倍の値 get rms value
 }
 
-float dmahref[4] = {3.89, 7.22, 22.78, 37.78};
-
 void freqDuty(int ch) {                         // 周波数とデューティ比を求める detect frequency and duty cycle value from waveform data
   int swingCenter;                              // center of wave (half of p-p)
   float p0 = 0;                                 // 1-st posi edge

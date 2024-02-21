@@ -1,6 +1,6 @@
 /*
- * STM32F103C8T6 Oscilloscope using a 320x240 TFT Version 1.02
- * The max DMA sampling rates is 2.57Msps with 2 channels.
+ * STM32F103C8T6 Oscilloscope using a 320x240 TFT Version 1.03
+ * The max DMA sampling rates is 5.14Msps with single channel, 2.57Msps with 2 channels.
  * The max realtime sampling rates is 125ksps with 2 channels.
  * + Pulse Generator
  * + PWM DDS Function Generator (23 waveforms)
@@ -84,13 +84,15 @@ const char TRIG_Modes[4][5] PROGMEM = {"Auto", "Norm", "Scan", "One "};
 const int TRIG_E_UP = 0;
 const int TRIG_E_DN = 1;
 #define RATE_MIN 0
-#define RATE_MAX 18
-#define RATE_DMA 3
-#define RATE_DUAL 0
-#define RATE_ROLL 12
+#define RATE_MAX 19
+#define RATE_ILV 0
+#define RATE_DMA 4
+#define RATE_DUAL 1
+#define RATE_ROLL 13
 #define ITEM_MAX 29
-const char Rates[19][5] PROGMEM = {"9.7u", "18u ", "57u ", "94u ", "200u", "500u", " 1ms", " 2ms", " 5ms", "10ms", "20ms", "50ms", "100m", "200m", "0.5s", " 1s ", " 2s ", " 5s ", " 10s"};
-const unsigned long HREF[] PROGMEM = {4, 9, 23, 38, 80, 200, 400, 800, 2000, 4000, 8000, 20000, 40000, 80000, 200000, 400000, 800000, 2000000, 4000000, 8000000};
+const char Rates[20][5] PROGMEM = {"4.9", "9.7u", "18u ", "57u ", "94u ", "200u", "500u", " 1ms", " 2ms", " 5ms", "10ms", "20ms", "50ms", "100m", "200m", "0.5s", " 1s ", " 2s ", " 5s ", " 10s"};
+const unsigned long HREF[] PROGMEM = {2, 4, 7, 23, 38, 80, 200, 400, 800, 2000, 4000, 8000, 20000, 40000, 80000, 200000, 400000, 800000, 2000000, 4000000, 8000000};
+const float dmahref[5] = {1.944, 3.889, 7.222, 22.78, 37.78};
 #define RANGE_MIN 0
 #define RANGE_MAX 4
 #define VRF 3.3
@@ -440,7 +442,7 @@ void loop() {
         }
         oad = ad;
 
-        if (rate > 9)
+        if (rate > 10)
           CheckSW();      // no need for fast sampling
         if (trig_mode == TRIG_SCAN)
           break;
@@ -458,9 +460,15 @@ void loop() {
     else
       sample = 0;
 
-    if (rate <= RATE_DMA) {   // DMA, min 0.39us sampling (2.57Msps)
+    if (rate <= RATE_ILV) {   // DMA interleave, min 0.19us sampling (5.14Msps)
+      interleave_setup();
+      if (ch0_mode != MODE_OFF)
+        takeSamples_ilv(ad_ch0);
+      else if (ch1_mode != MODE_OFF)
+        takeSamples_ilv(ad_ch1);
+    } else if (rate <= RATE_DMA) {   // DMA, min 0.39us sampling (2.57Msps)
       takeSamples();
-    } else if (rate <= 8) {   // dual channel 8us, 20us, 40us, 80us, 200us sampling
+    } else if (rate <= 9) {   // dual channel 8us, 20us, 40us, 80us, 200us sampling
       sample_dual_us(HREF[rate] / 10);
     } else {                // dual channel 0.4ms, 0.8ms, 2ms sampling
       sample_dual_ms(HREF[rate] / 10);
@@ -693,7 +701,11 @@ void draw_scale() {
   float fhref, nyquist;
   display.setTextColor(TXTCOLOR);
   display.setCursor(0, ylim); display.print("0Hz"); 
-  fhref = (float)HREF[rate];
+  if (rate <= RATE_DMA) {   // DMA sampling
+    fhref = dmahref[rate];
+  } else {
+    fhref = (float) HREF[rate];
+  }
   nyquist = 5.0e6 / fhref; // Nyquist frequency
   if (nyquist > 999.0) {
     nyquist = nyquist / 1000.0;
