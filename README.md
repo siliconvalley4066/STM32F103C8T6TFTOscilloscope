@@ -27,7 +27,10 @@ CPU speed 72MHz<br>
 Libraries:<br>
 Adafruit_ILI9341<br>
 XPT2046_Touchscreen<br>
-arduinoFFT by Enrique Condes 1.6.1<br>
+arduinoFFT by Enrique Condes 2.0.0<br>
+
+There are conflicts with the swap macro in Adafruit_GFX_AS.h and the private function swap in arduinoFFT.h.  You have to edit the library source code arduinoFFT.h and place a line at the top as following:<br>
+#undef swap<br>
 
 Schematics:<br>
 <img src="STM32TFTOscillo.png">
