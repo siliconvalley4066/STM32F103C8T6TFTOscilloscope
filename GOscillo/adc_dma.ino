@@ -16,18 +16,16 @@ void dmaadc_setup() {   //Setup ADC peripherals for regular simultaneous mode.
   ADC1->regs->SQR3 = PIN_MAP[ad_ch0].adc_channel;
   ADC2->regs->SQR3 = PIN_MAP[ad_ch1].adc_channel;
   ADC1->regs->CR1 |= 0x60000;         // set ADC1 in regular simultaneous mode
-//  ADC2->regs->CR1 |= 0x60000;         // set ADC2 in regular simultaneous mode
   ADC1->regs->CR2 |= ADC_CR2_CONT | ADC_CR2_SWSTART;  // ADC 1 continuos
   ADC2->regs->CR2 |= ADC_CR2_CONT | ADC_CR2_SWSTART;  // ADC 2 continuos
 }
 
-void dmaadc_ilv_setup(byte ad_ch) {   //Setup ADC peripherals for interleaved continuous mode.
+void dmaadc_ilv_setup(byte ad_ch) {   //Setup ADC peripherals for Fast interleaved mode.
   adc_set_reg_seqlen(ADC1, 1);
   adc_set_reg_seqlen(ADC2, 1);
   ADC1->regs->SQR3 = PIN_MAP[ad_ch].adc_channel;
   ADC2->regs->SQR3 = PIN_MAP[ad_ch].adc_channel;
-  ADC1->regs->CR1 |= ADC_CR1_FASTINT;   // set ADC1 in Interleaved mode mode
-//  ADC2->regs->CR1 |= ADC_CR1_FASTINT;   // set ADC2 in Interleaved mode mode
+  ADC1->regs->CR1 |= ADC_CR1_FASTINT;   // set ADC1 in Fast Interleaved mode
   ADC1->regs->CR2 |= ADC_CR2_CONT | ADC_CR2_SWSTART;  // ADC 1 continuos
   ADC2->regs->CR2 |= ADC_CR2_CONT | ADC_CR2_SWSTART;  // ADC 2 continuos
 }
@@ -65,8 +63,7 @@ void takeSamples_ilv(byte ad_ch) {
   dma_disable(DMA1, DMA_CH1); //End of trasfer, disable DMA and Continuous mode.
   order_capture(ad_ch);
   int t = trigger_point();
-  scaleDataArray(ad_ch0, t);
-  scaleDataArray(ad_ch1, t);
+  scaleDataArray(ad_ch, t);
 //  debug_print();
 }
 

@@ -1,7 +1,7 @@
 /*
- * STM32F103C8T6 Oscilloscope using a 320x240 TFT Version 1.03
+ * STM32F103C8T6 Oscilloscope using a 320x240 TFT Version 1.04
  * The max DMA sampling rates is 5.14Msps with single channel, 2.57Msps with 2 channels.
- * The max realtime sampling rates is 125ksps with 2 channels.
+ * The max software loop sampling rates is 125ksps with 2 channels.
  * + Pulse Generator
  * + PWM DDS Function Generator (23 waveforms)
  * Copyright (c) 2023, Siliconvalley4066
@@ -39,7 +39,9 @@ XPT2046_Touchscreen ts(CS_PIN);
 #endif
 #include "arduinoFFT.h"
 #define FFT_N 256
-arduinoFFT FFT = arduinoFFT();  // Create FFT object
+double vReal[FFT_N]; // Real part array, actually float type
+double vImag[FFT_N]; // Imaginary part array
+ArduinoFFT<double> FFT = ArduinoFFT<double>(vReal, vImag, FFT_N, 1.0);  // Create FFT object
 
 float waveFreq[2];             // frequency (Hz)
 float waveDuty[2];             // duty ratio (%)
@@ -112,7 +114,7 @@ byte sample=0;                          // index for double buffer
 bool fft_mode = false, pulse_mode = false, dds_mode = false, fcount_mode = false;
 byte info_mode = 3; // Text information display mode
 int trigger_ad;
-const double sys_clk = 72e6;
+const double sys_clk = (double)F_CPU;
 volatile bool wfft, wdds;
 
 #define LEFTPIN   PB13  // LEFT
@@ -668,9 +670,6 @@ void sample_dual_ms(unsigned int r) { // dual channel. r > 500
   scaleDataArray(ad_ch1, 0);
 }
 
-double vReal[FFT_N]; // Real part array, actually float type
-double vImag[FFT_N]; // Imaginary part array
-
 void plotFFT() {
   byte *lastplot, *newplot;
   int ylim = 200;
@@ -680,10 +679,10 @@ void plotFFT() {
     vReal[i] = cap_buf[i];
     vImag[i] = 0.0;
   }
-  FFT.DCRemoval(vReal, FFT_N);
-  FFT.Windowing(vReal, FFT_N, FFT_WIN_TYP_HANN, FFT_FORWARD); // Weigh data
-  FFT.Compute(vReal, vImag, FFT_N, FFT_FORWARD);          // Compute FFT
-  FFT.ComplexToMagnitude(vReal, vImag, FFT_N);            // Compute magnitudes
+  FFT.dcRemoval();
+  FFT.windowing(FFTWindow::Hann, FFTDirection::Forward);  // Weigh data
+  FFT.compute(FFTDirection::Forward);                     // Compute FFT
+  FFT.complexToMagnitude();                               // Compute magnitudes
   newplot = data[sample];
   lastplot = data[clear];
   for (int i = 1; i < FFT_N/2; i++) {
@@ -701,11 +700,7 @@ void draw_scale() {
   float fhref, nyquist;
   display.setTextColor(TXTCOLOR);
   display.setCursor(0, ylim); display.print("0Hz"); 
-  if (rate <= RATE_DMA) {   // DMA sampling
-    fhref = dmahref[rate];
-  } else {
-    fhref = (float) HREF[rate];
-  }
+  fhref = freqhref();
   nyquist = 5.0e6 / fhref; // Nyquist frequency
   if (nyquist > 999.0) {
     nyquist = nyquist / 1000.0;
@@ -724,6 +719,16 @@ void draw_scale() {
     display.setCursor(116, ylim); display.print(nyquist/2,0);
     display.setCursor(238, ylim); display.print(nyquist,0);
   }
+}
+
+float freqhref() {
+  float fhref;
+  if (rate <= RATE_DMA) {   // DMA sampling
+    fhref = dmahref[rate];
+  } else {
+    fhref = (float) HREF[rate];
+  }
+  return fhref;
 }
 
 #ifdef EEPROM_START
@@ -831,7 +836,9 @@ void loadEEPROM() { // Read setting values from EEPROM (abnormal values will be 
   *((uint16 *)&ifreq) = EEPROM.read(p++);     // ifreq low
   *((uint16 *)&ifreq + 1) = EEPROM.read(p++); // ifreq high
   if (ifreq > 999999L) ++error;
-  if (error > 0)
+  if (error > 0) {
+    EEPROM.format();
     set_default();
+  }
 }
 #endif
