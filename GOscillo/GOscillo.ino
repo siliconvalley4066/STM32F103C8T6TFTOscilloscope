@@ -1,5 +1,5 @@
 /*
- * STM32F103C8T6 Oscilloscope using a 320x240 TFT Version 1.04
+ * STM32F103C8T6 Oscilloscope using a 320x240 TFT Version 1.05
  * The max DMA sampling rates is 5.14Msps with single channel, 2.57Msps with 2 channels.
  * The max software loop sampling rates is 125ksps with 2 channels.
  * + Pulse Generator
@@ -90,6 +90,7 @@ const int TRIG_E_DN = 1;
 #define RATE_ILV 0
 #define RATE_DMA 4
 #define RATE_DUAL 1
+#define RATE_SLOW 10
 #define RATE_ROLL 13
 #define ITEM_MAX 29
 const char Rates[20][5] PROGMEM = {"4.9u", "9.7u", "18u ", "57u ", "94u ", "200u", "500u", " 1ms", " 2ms", " 5ms", "10ms", "20ms", "50ms", "100m", "200m", "0.5s", " 1s ", " 2s ", " 5s ", " 10s"};
@@ -116,6 +117,7 @@ byte info_mode = 3; // Text information display mode
 int trigger_ad;
 const double sys_clk = (double)F_CPU;
 volatile bool wfft, wdds;
+byte time_mag = 1;  // magnify timebase: 1, 2, 5 or 10
 
 #define LEFTPIN   PB13  // LEFT
 #define RIGHTPIN  PB14  // RIGHT
@@ -361,7 +363,7 @@ void ClearAndDrawDot(int i) {
 
 void scaleDataArray(byte ad_ch, int trig_point)
 {
-  byte *pdata, ch_mode, range;
+  byte *pdata, ch_mode, range, ch;
   short ch_off;
   uint16_t *idata, *qdata;
   long a, b;
@@ -372,12 +374,14 @@ void scaleDataArray(byte ad_ch, int trig_point)
     range = range1;
     pdata = data[sample+1];
     idata = &cap_buf1[trig_point];
+    ch = 1;
   } else {
     ch_off = ch0_off;
     ch_mode = ch0_mode;
     range = range0;
     pdata = data[sample+0];
     idata = &cap_buf[trig_point];
+    ch = 0;
   }
   for (int i = 0; i < SAMPLES; i++) {
     a = ((*idata + ch_off) * VREF[range] + 2048) >> 12;
@@ -387,6 +391,18 @@ void scaleDataArray(byte ad_ch, int trig_point)
       a = LCD_YMAX - a;
     *pdata++ = (byte) a;
     ++idata;
+  }
+  if (rate < RATE_ROLL) {
+    switch (time_mag) {
+    case 2:
+    case 5:
+    case 10:
+      mag(data[sample+ch], time_mag); // magnify timebase for display
+      break;
+    default:  // do nothing
+      time_mag = 1;   // fix odd value
+      break;
+    }
   }
 }
 
@@ -444,7 +460,7 @@ void loop() {
         }
         oad = ad;
 
-        if (rate > 10)
+        if (rate > RATE_SLOW)
           CheckSW();      // no need for fast sampling
         if (trig_mode == TRIG_SCAN)
           break;
@@ -470,7 +486,7 @@ void loop() {
         takeSamples_ilv(ad_ch1);
     } else if (rate <= RATE_DMA) {   // DMA, min 0.39us sampling (2.57Msps)
       takeSamples();
-    } else if (rate <= 9) {   // dual channel 8us, 20us, 40us, 80us, 200us sampling
+    } else if (rate < RATE_SLOW) {   // dual channel 8us, 20us, 40us, 80us, 200us sampling
       sample_dual_us(HREF[rate] / 10);
     } else {                // dual channel 0.4ms, 0.8ms, 2ms sampling
       sample_dual_ms(HREF[rate] / 10);
@@ -489,7 +505,7 @@ void loop() {
       r = r_[rate - RATE_ROLL];  // rate may be changed in loop
       while((st - micros())<r) {
         CheckSW();
-        if (rate<RATE_ROLL)
+        if (rate < RATE_ROLL)
           break;
       }
       if (rate<RATE_ROLL) { // sampling rate has been changed
@@ -580,6 +596,9 @@ void measure_voltage(int ch) {
   int x;
   byte y;
   if (fft_mode) return;
+  float vavr = VRF * dataAve[ch] / 40950.0;
+  float vmax = VRF * dataMax[ch] / 4095.0;
+  float vmin = VRF * dataMin[ch] / 4095.0;
   if (info_mode & INFO_BIG) {
     x = textINFO, y = 62;       // Big
   } else {
@@ -591,9 +610,6 @@ void measure_voltage(int ch) {
     y += 100;
     display.setTextColor(CH2COLOR, BGCOLOR);
   }
-  float vavr = VRF * dataAve[ch] / 40950.0;
-  float vmax = VRF * dataMax[ch] / 4095.0;
-  float vmin = VRF * dataMin[ch] / 4095.0;
   TextBG(&y, x, 8);
   display.print("max");  display.print(vmax); if (vmax >= 0.0) display.print('V');
   TextBG(&y, x, 8);
@@ -760,6 +776,7 @@ void saveEEPROM() {                   // Save the setting value in EEPROM after 
       EEPROM.update(p++, wave_id);
       EEPROM.update(p++, ifreq & 0xffff);
       EEPROM.update(p++, (ifreq >> 16) & 0xffff);
+      EEPROM.update(p++, time_mag);
     }
   }
 }
@@ -787,6 +804,7 @@ void set_default() {
   dds_mode = false;
   wave_id = 0;    // sine wave
   ifreq = 23841;  // 238.41Hz
+  time_mag = 1;   // magnify timebase
 }
 
 extern const byte wave_num;
@@ -836,6 +854,7 @@ void loadEEPROM() { // Read setting values from EEPROM (abnormal values will be 
   *((uint16 *)&ifreq) = EEPROM.read(p++);     // ifreq low
   *((uint16 *)&ifreq + 1) = EEPROM.read(p++); // ifreq high
   if (ifreq > 999999L) ++error;
+  time_mag = EEPROM.read(p++);               // magnify timebase
   if (error > 0) {
     EEPROM.format();
     set_default();

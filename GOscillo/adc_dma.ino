@@ -12,22 +12,24 @@ STM32ADC myADC1(ADC1), myADC2(ADC2);
 
 void dmaadc_setup() {   //Setup ADC peripherals for regular simultaneous mode.
   adc_set_reg_seqlen(ADC1, 1);
-  adc_set_reg_seqlen(ADC2, 1);
+//  adc_set_reg_seqlen(ADC2, 1);
   ADC1->regs->SQR3 = PIN_MAP[ad_ch0].adc_channel;
   ADC2->regs->SQR3 = PIN_MAP[ad_ch1].adc_channel;
-  ADC1->regs->CR1 |= 0x60000;         // set ADC1 in regular simultaneous mode
-  ADC1->regs->CR2 |= ADC_CR2_CONT | ADC_CR2_SWSTART;  // ADC 1 continuos
-  ADC2->regs->CR2 |= ADC_CR2_CONT | ADC_CR2_SWSTART;  // ADC 2 continuos
+  ADC1->regs->CR1 = 0x60000;          // set ADC1 in regular simultaneous mode
+  ADC1->regs->CR2 |= ADC_CR2_CONT;    // ADC 1 continuos
+  ADC2->regs->CR2 |= ADC_CR2_CONT;    // ADC 2 continuos
+  ADC1->regs->CR2 |= ADC_CR2_SWSTART; // ADC 1 continuos
 }
 
 void dmaadc_ilv_setup(byte ad_ch) {   //Setup ADC peripherals for Fast interleaved mode.
   adc_set_reg_seqlen(ADC1, 1);
-  adc_set_reg_seqlen(ADC2, 1);
+//  adc_set_reg_seqlen(ADC2, 1);
   ADC1->regs->SQR3 = PIN_MAP[ad_ch].adc_channel;
   ADC2->regs->SQR3 = PIN_MAP[ad_ch].adc_channel;
-  ADC1->regs->CR1 |= ADC_CR1_FASTINT;   // set ADC1 in Fast Interleaved mode
-  ADC1->regs->CR2 |= ADC_CR2_CONT | ADC_CR2_SWSTART;  // ADC 1 continuos
-  ADC2->regs->CR2 |= ADC_CR2_CONT | ADC_CR2_SWSTART;  // ADC 2 continuos
+  ADC1->regs->CR1 = ADC_CR1_FASTINT;  // set ADC1 in Fast Interleaved mode
+  ADC1->regs->CR2 |= ADC_CR2_CONT;    // ADC 1 continuos
+  ADC2->regs->CR2 |= ADC_CR2_CONT;    // ADC 2 continuos
+  ADC1->regs->CR2 |= ADC_CR2_SWSTART; // ADC 1 continuos
 }
 
 void takeSamples() {
@@ -50,7 +52,7 @@ void takeSamples() {
 }
 
 void takeSamples_ilv(byte ad_ch) {
-  // This loop uses regular simultaneous mode to get the best performance out of the ADCs
+  // This loop uses Fast interleaved mode to get the best performance out of the ADCs
   dma_init(DMA1);
   dma_attach_interrupt(DMA1, DMA_CH1, DMA1_CH1_Event);
   adc_dma_enable(ADC1);
@@ -85,6 +87,14 @@ void order_capture(byte ad_ch) {  // Swap word order to fix STM32 bug in packing
       } else {
         cap_buf1[i] = cap_buf[i+1];
       }
+    }
+  }
+}
+
+void order_capture0(byte ad_ch) { // don't Swap word order
+  if (ad_ch == ad_ch1) {
+    for (int i=0; i < NSAMP/2; i++) {
+      cap_buf1[i] = cap_buf[i];
     }
   }
 }

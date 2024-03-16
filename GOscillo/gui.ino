@@ -49,7 +49,24 @@ void CheckTouch() {
     } else if (x < 120) {     // CH1 voltage range
       item = (item != SEL_RANGE1) ? SEL_RANGE1 : SEL_NONE;
     } else if (x < 180) {     // Rate
-      item = (item != SEL_RATE) ? SEL_RATE : SEL_NONE;
+      if (item != SEL_RATE) {
+      item = SEL_RATE;
+      } else {
+        switch (time_mag) {
+        case 1:
+          time_mag = 2;
+          break;
+        case 2:
+          time_mag = 5;
+          break;
+        case 5:
+          time_mag = 10;
+          break;
+        default:
+          time_mag = 1;
+          break;
+        }
+      }
     } else if (x < 240) {     // Vertical position
       if (item != SEL_OFST1 && item != SEL_OFST2)
         item = SEL_OFST1;
@@ -407,8 +424,16 @@ void DrawText_big() {
     set_menu_color(SEL_TGLVL);
     display.print("TGLV");
   } else {
-    display.setTextColor(OFFCOLOR, BGCOLOR);
-    display.print("VPOS");
+    if (time_mag == 2) {
+      display.print("x2  ");
+    } else if (time_mag == 5) {
+      display.print("x5  ");
+    } else if (time_mag == 10) {
+      display.print("x10 ");
+    } else {
+      display.setTextColor(OFFCOLOR, BGCOLOR);
+      display.print("VPOS");
+    }
   }
   display.setCursor(252, 1);  // Function
   set_menu_color(SEL_FUNC);
