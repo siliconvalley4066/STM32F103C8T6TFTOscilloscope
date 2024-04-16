@@ -376,6 +376,44 @@ void disp_trig_mode() {
   display.print(' ');
 }
 
+void DrawText() {
+  if (info_mode & INFO_OFF)
+    return;
+  if (info_mode & INFO_BIG) {
+    display.setTextSize(2); // Big
+  } else {
+    display.setTextSize(1); // Small
+  }
+
+//  if (info_mode && Start) {
+  if (info_mode & (INFO_FRQ1 | INFO_VOL1)) {
+    dataAnalize(0);
+    if (info_mode & INFO_FRQ1)
+      measure_frequency(0);
+    if (info_mode & INFO_VOL1)
+      measure_voltage(0);
+  }
+  if (info_mode & (INFO_FRQ2 | INFO_VOL2)) {
+    dataAnalize(1);
+    if (info_mode & INFO_FRQ2)
+      measure_frequency(1);
+    if (info_mode & INFO_VOL2)
+      measure_voltage(1);
+  }
+  DrawText_big();
+  if (!fft_mode)
+    draw_trig_level(GRIDCOLOR); // draw trig_lv mark
+}
+
+void draw_trig_level(int color) { // draw trig_lv mark
+  int x, y;
+
+  x = XOFF+DISPLNG+1; y = YOFF+LCD_YMAX - trig_lv;
+  display.drawLine(x, y, x+8, y+4, color);
+  display.drawLine(x+8, y+4, x+8, y-4, color);
+  display.drawLine(x+8, y-4, x, y, color);
+}
+
 void TextBG(byte *y, int x, byte chrs) {
   int yinc, wid, hi;
   if (info_mode & INFO_BIG) {

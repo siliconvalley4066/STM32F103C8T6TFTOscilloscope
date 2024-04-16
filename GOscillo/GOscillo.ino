@@ -1,5 +1,5 @@
 /*
- * STM32F103C8T6 Oscilloscope using a 320x240 TFT Version 1.06
+ * STM32F103C8T6 Oscilloscope using a 320x240 TFT Version 1.07
  * The max DMA sampling rates is 5.14Msps with single channel, 2.57Msps with 2 channels.
  * The max software loop sampling rates is 125ksps with 2 channels.
  * + Pulse Generator
@@ -65,8 +65,8 @@ const int DISPLNG = 300;
 const int DOTS_DIV = 25;
 const int XOFF = 10;
 const int YOFF = 20;
-const byte ad_ch0 = PA0;                 // Analog pin for channel 0
-const byte ad_ch1 = PA1;                 // Analog pin for channel 1
+const byte ad_ch0 = PA0;                // Analog pin for channel 0
+const byte ad_ch1 = PA1;                // Analog pin for channel 1
 const long VREF[] = {83, 165, 413, 825, 1650}; // reference voltage 3.3V ->  82.5 :   1V/div range (40mV/dot)
                                         //                        -> 165 : 0.5V/div
                                         //                        -> 413 : 0.2V/div
@@ -227,44 +227,6 @@ void DrawGrid() {
 }
 #endif
 
-void DrawText() {
-  if (info_mode & INFO_OFF)
-    return;
-  if (info_mode & INFO_BIG) {
-    display.setTextSize(2); // Big
-  } else {
-    display.setTextSize(1); // Small
-  }
-
-//  if (info_mode && Start) {
-  if (info_mode & (INFO_FRQ1 | INFO_VOL1)) {
-    dataAnalize(0);
-    if (info_mode & INFO_FRQ1)
-      measure_frequency(0);
-    if (info_mode & INFO_VOL1)
-      measure_voltage(0);
-  }
-  if (info_mode & (INFO_FRQ2 | INFO_VOL2)) {
-    dataAnalize(1);
-    if (info_mode & INFO_FRQ2)
-      measure_frequency(1);
-    if (info_mode & INFO_VOL2)
-      measure_voltage(1);
-  }
-  DrawText_big();
-  if (!fft_mode)
-    draw_trig_level(GRIDCOLOR); // draw trig_lv mark
-}
-
-void draw_trig_level(int color) { // draw trig_lv mark
-  int x, y;
-
-  x = XOFF+DISPLNG+1; y = YOFF+LCD_YMAX - trig_lv;
-  display.drawLine(x, y, x+8, y+4, color);
-  display.drawLine(x+8, y+4, x+8, y-4, color);
-  display.drawLine(x+8, y-4, x, y, color);
-}
-
 unsigned long fcount = 0;
 //const double freq_ratio = 20000.0 / 19987.0;
 
@@ -333,12 +295,12 @@ void ClearAndDrawGraph() {
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p5++, XOFF+x+1, YOFF+LCD_YMAX-*p6++, BGCOLOR);
       display.drawLine(XOFF+x, YOFF+LCD_YMAX-*p7++, XOFF+x+1, YOFF+LCD_YMAX-*p8++, CH2COLOR);
     }
-//    CheckSW();
   }
 #endif
 }
 
 void ClearAndDrawDot(int i) {
+  DrawGrid(i);
 #if 0
   for (int x=0; x<DISPLNG; x++) {
     display.drawPixel(XOFF+i, YOFF+LCD_YMAX-odat01, BGCOLOR);
@@ -348,7 +310,6 @@ void ClearAndDrawDot(int i) {
   }
 #else
   if (i < 1) {
-    DrawGrid(i);
     return;
   }
   if (ch0_mode != MODE_OFF) {
@@ -360,7 +321,6 @@ void ClearAndDrawDot(int i) {
     display.drawLine(XOFF+i-1, YOFF+LCD_YMAX-data[1][i-1], XOFF+i, YOFF+LCD_YMAX-data[1][i], CH2COLOR);
   }
 #endif
-  DrawGrid(i);
 }
 
 void scaleDataArray(byte ad_ch, int trig_point)
@@ -546,7 +506,6 @@ void loop() {
 }
 
 void draw_screen() {
-//  display.fillScreen(BGCOLOR);
   if (wfft != fft_mode) {
     fft_mode = wfft;
     display.fillScreen(BGCOLOR);
@@ -682,8 +641,6 @@ void sample_dual_ms(unsigned int r) { // dual channel. r > 500
       cap_buf1[i] = analogRead(ad_ch1);
     }
   }
-//  if (ch0_mode == MODE_OFF) memset(data[0], 0, SAMPLES);
-//  if (ch1_mode == MODE_OFF) memset(data[1], 0, SAMPLES);
   scaleDataArray(ad_ch0, 0);
   scaleDataArray(ad_ch1, 0);
 }
@@ -848,7 +805,7 @@ void loadEEPROM() { // Read setting values from EEPROM (abnormal values will be 
   pulse_mode = EEPROM.read(p++);            // pulse_mode
   duty = EEPROM.read(p++);                  // duty
   p_range = EEPROM.read(p++);               // p_range
-  if (p_range > 8) ++error;
+  if (p_range > 16) ++error;
   count = EEPROM.read(p++);                 // count
   dds_mode = EEPROM.read(p++);              // DDS mode
   wave_id = EEPROM.read(p++);               // DDS wave id
