@@ -26,7 +26,7 @@ CPU speed 72MHz<br>
 </p>
 
 Libraries:<br>
-Adafruit_ILI9341<br>
+Adafruit_ILI9341_STM<br>
 XPT2046_Touchscreen<br>
 arduinoFFT by Enrique Condes 2.0.0<br>
 
