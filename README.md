@@ -1,6 +1,8 @@
 # STM32F103C8T6TFTOscilloscope
 STM32F103C8T6 TFT dual channel oscilloscope with Pulse Generator, DDS Function Generator
 
+<img src="STM32F103TFT.jpg">
+
 This displays an oscilloscope screen on a 320x240 TFT LCD.
 The settings are controled on the touch screen of the TFT LCD and by the 5 direction switch.
 It contains Pulse Generator and DDS Function Generator.
