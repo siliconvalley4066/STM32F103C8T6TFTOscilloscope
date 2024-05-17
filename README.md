@@ -36,7 +36,7 @@ There are conflicts with the swap macro in Adafruit_GFX_AS.h and the private fun
 #undef swap<br>
 
 Schematics:<br>
-<img src="STM32TFTOscillo.png">
+<img src="STM32TFTOscillo3.png">
 
 Description is here, although it is written in Japanese language:
 http://harahore.g2.xrea.com/STM32/STM32TFTOscillo.html
