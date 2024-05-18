@@ -32,6 +32,15 @@ Adafruit_ILI9341_STM<br>
 XPT2046_Touchscreen<br>
 arduinoFFT by Enrique Condes 2.0.0<br>
 
+Adafruit_GFX_AS.h seems to be old, and in order to use Adafruit_GFX_AS.h for high-speed rendering, it was necessary to add<br>
+#define textsize textsize_x<br>
+around line 62 of the Adafruit_GFX_AS.cpp of the STM32 library.<br>
+
+On Arduino_STM32 core you may get a compile error in SPI.h. In this case, edit SPI.h<br>
+void transfer(uint8_t * trx_buf, uint32 len) { transfer((const uint8_t *)trx_buf, trx_buf, len); }<br>
+to<br>
+void transfer(uint8_t * trx_buf, size_t len) { transfer((const uint8_t *)trx_buf, trx_buf, len); }
+
 There are conflicts with the swap macro in Adafruit_GFX_AS.h and the private function swap in arduinoFFT.h.  You have to edit the library source code arduinoFFT.h and place a line at the top as following:<br>
 #undef swap<br>
 
