@@ -159,7 +159,7 @@ void CheckTouch() {
     trig_lv = YOFF+LCD_YMAX - y;
     set_trigger_ad();
   }
-  saveTimer = 5000;     // set EEPROM save timer to 5 secnd
+  saveTimer = 5000;     // set EEPROM save timer to 5 second
 }
 #endif
 
@@ -621,7 +621,7 @@ void CheckSW() {
   if (wrate != 0) {
     updown_rate(wrate);
     wrate = 0;
-    saveTimer = 5000;     // set EEPROM save timer to 5 secnd
+    saveTimer = 5000;     // set EEPROM save timer to 5 second
   }
 
 #ifndef NOLCD
@@ -650,7 +650,7 @@ void CheckSW() {
   }
   if (sw != lastsw)
     vtime = ms;
-  saveTimer = 5000;     // set EEPROM save timer to 5 secnd
+  saveTimer = 5000;     // set EEPROM save timer to 5 second
   menu_sw(sw); 
   DrawText();
 //  display.display();
