@@ -53,7 +53,7 @@ static void disable_pwm(const stm32_pin_info *i) {
     }
 }
 </pre>
-Usually SPI.cpp is located in C:\Users\user\AppData\Local\Arduino15\packages\stm32duino\hardware\STM32F1\2022.9.26\libraries\SPI\src
+Usually SPI.cpp is located in C:\Users\user\AppData\Local\Arduino15\packages\stm32duino\hardware\STM32F1\2022.9.26\libraries\SPI\src <br>
 Please note that AppData is a hidden directory.
 
 Schematics:<br>
