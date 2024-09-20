@@ -18,6 +18,7 @@ Specifications:
 <li>Sampling rate selection</li>
 <li>Built in Pulse Generator</li>
 <li>Built in DDS Function Generator</li>
+<li>Built in Frequency Counter up to 192MHz</li>
 <br>
 <p>
 Develop environment is:<br>
@@ -44,8 +45,19 @@ void transfer(uint8_t * trx_buf, size_t len) { transfer((const uint8_t *)trx_buf
 There are conflicts with the swap macro in Adafruit_GFX_AS.h and the private function swap in arduinoFFT.h.  You have to edit the library source code arduinoFFT.h and place a line at the top as following:<br>
 #undef swap<br>
 
+For the frequency counter to work, you have to edit the line 774 of SPI.cpp temporarily as:
+<pre>
+static void disable_pwm(const stm32_pin_info *i) {
+    if (i->timer_device) {
+//        timer_set_mode(i->timer_device, i->timer_channel, TIMER_DISABLED);
+    }
+}
+</pre>
+Usually SPI.cpp is located in C:\Users\user\AppData\Local\Arduino15\packages\stm32duino\hardware\STM32F1\2022.9.26\libraries\SPI\src
+Please note that AppData is a hidden directory.
+
 Schematics:<br>
-<img src="STM32TFTOscillo3.png">
+<img src="STM32TFTOscillo.png">
 
 Description is here, although it is written in Japanese language:
 http://harahore.g2.xrea.com/STM32/STM32TFTOscillo.html
