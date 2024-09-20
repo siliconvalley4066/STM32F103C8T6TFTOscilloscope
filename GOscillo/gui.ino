@@ -250,13 +250,23 @@ void low_touch_func(uint16_t x) {
       clear_bottom_text();                          // clear bottom text area
     } else if (x < 300) {     // Frequency Counter
       item = SEL_FCNT;
-      fcount_mode = true;
       clear_bottom_text();                          // clear bottom text area
+      if (pulse_mode == true) {
+        pulse_close();
+        pulse_mode = false;
+      }
+      fcount_mode = true;
+      PeriodCount.begin(1000);
+      set_range();
     }
   } else if (item >= SEL_PWM && item <= SEL_PWMDUTY) {
     if (x < 60) {             // PWM
     } else if (x < 120) {     // ON/OFF
       if (pulse_mode == false) {  // turn on
+        if (fcount_mode == true) {  // stop frequency counter if active
+          PeriodCount.end();
+          fcount_mode = false;
+        }
         update_frq(0);
         pulse_start();
         pulse_mode = true;
@@ -305,6 +315,7 @@ void low_touch_func(uint16_t x) {
     if (x > 240 && x < 300) { // FCNT
       item = SEL_FUNC;
       fcount_mode = false;
+      PeriodCount.end();
       clear_bottom_text();                          // clear bottom text area
     }
   }
@@ -524,8 +535,8 @@ void DrawText_big() {
     set_pos_menu(240, y, SEL_PWMDUTY);  // Duty
     disp_pulse_dty();
   } else if (item == SEL_FCNT && fcount_mode == true) {
-    set_pos_color(0, y, TXTCOLOR); // Frequency
-//    fcount_disp();
+    set_pos_color(50, y, TXTCOLOR); // Frequency
+    fcount_disp();
     set_pos_menu(252, y, SEL_FCNT); // FCNT
     display.print("FCNT ");
   } else if (item >= SEL_FUNC) {
