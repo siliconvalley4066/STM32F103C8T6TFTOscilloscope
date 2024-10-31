@@ -60,4 +60,4 @@ Schematics:<br>
 <img src="STM32TFTOscillo.png">
 
 Description is here, although it is written in Japanese language:
-http://harahore.g2.xrea.com/STM32/STM32TFTOscillo.html
+https://ss1.xrea.com/harahore.g2.xrea.com/STM32/STM32TFTOscillo.html
