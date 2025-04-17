@@ -1,5 +1,5 @@
 /*
-   STM32F103C8T6 Period Counter Library Version 2.00
+   STM32F103C8T6 Period Counter Library Version 2.03
    Copyright (c) 2024, Siliconvalley4066
    Licenced under the GNU GPL Version 3.0
 */
@@ -9,7 +9,7 @@ uint8_t PeriodCountClass::_prescaler = 8;      // use 1/8 prescaler or not
 uint16_t PeriodCountClass::_gatetime = 1000;
 uint16_t PeriodCountClass::_psc = 45;
 uint16_t PeriodCountClass::_arr = 65535;
-uint32 PeriodCountClass::_measure_time, PeriodCountClass::_timeout = 2000;
+uint32 PeriodCountClass::_measure_time, PeriodCountClass::_timeout = 5000;
 volatile uint16_t PeriodCountClass::_preva = 0;
 volatile uint16_t PeriodCountClass::_prevb = 0;
 volatile uint32 PeriodCountClass::_count = 0;
@@ -73,7 +73,7 @@ uint32_t PeriodCountClass::read(void) {
   if ((millis() - PeriodCountClass::_measure_time) > _timeout) {
     count = 0;
   } else {
-    count = PeriodCountClass::_count;
+    count = _count;
   }
   _ready = false;
   PeriodCountClass::_measure_time = millis();
@@ -96,11 +96,11 @@ void PeriodCountClass::setpre(int pre) {
 }
 
 void PeriodCountClass::gatetime(uint16_t msec) {
-  PeriodCountClass::_gatetime = msec;
+  _gatetime = msec;
 }
 
 void PeriodCountClass::timeout(uint32 msec) {
-  PeriodCountClass::_timeout = msec;
+  _timeout = msec;
 }
 
 uint16_t PeriodCountClass::getetpsdiv(void) {
@@ -119,14 +119,15 @@ uint16_t PeriodCountClass::getetpsdiv(void) {
 
 double PeriodCountClass::countToFrequency(uint32_t count) {
   if (count == 0) return 0.0;
-  if (count > 144000000L) count = 144000000L; // upper limit FCPU * 2sec
+  if (count > 360000000L) count = 360000000L; // upper limit FCPU * 5sec
   return (double) ((uint32)_prescaler * (uint32)(_psc + 1) * ((uint32)_arr + 1)) * (double) F_CPU / (double) count;
 }
 
-void PeriodCountClass::adjust(double freq) {
+bool PeriodCountClass::adjust(double freq) {
+  bool adjusted = false;
   uint16_t psc, arr;
   uint32 ifreq = freq * (double) _gatetime / 1000.0;
-  if ((ifreq > 0) && (ifreq < 360000000L)) {
+  if (ifreq < 288000000L) {
     if (ifreq > 650000) {
       setpre(8);          // set ETR prescaler to 8
       ifreq >>= 3;
@@ -141,17 +142,19 @@ void PeriodCountClass::adjust(double freq) {
     if (arr > 1) arr--;
     if (arr < 1) arr = 1;
   } else {
-    return; // do nothing
+    return false; // do nothing
   }
   uint16_t etpsdiv = getetpsdiv();
   TIMER2->regs.gen->SMCR = TIMER_SMCR_ECE | etpsdiv | TIMER_SMCR_MSM; // external clock mode 2 + divider/8
-  PeriodCountClass::_psc = psc; PeriodCountClass::_arr = arr;
-  if (TIMER2->regs.gen->ARR != PeriodCountClass::_arr || TIMER2->regs.gen->PSC != PeriodCountClass::_psc) {
-    TIMER2->regs.gen->PSC = PeriodCountClass::_psc;
+  _psc = psc; _arr = arr;
+  if (TIMER2->regs.gen->ARR != _arr || TIMER2->regs.gen->PSC != _psc) {
+    TIMER2->regs.gen->PSC = _psc;
     TIMER2->regs.gen->CNT = 0;
-    TIMER2->regs.gen->ARR = PeriodCountClass::_arr;
+    TIMER2->regs.gen->ARR = _arr;
     TIMER2->regs.gen->EGR |= TIMER_EGR_UG;   //reread registers.
+    adjusted = true;
   }
+  return adjusted;
 }
 
 uint16_t PeriodCountClass::get_psc() {
@@ -185,19 +188,19 @@ void PeriodCountClass::capture_count(void) {
   } else {
     b = bb - _prevb;
   }
-  PeriodCountClass::_count = PeriodCountClass::mod_calc(a, b);
-  PeriodCountClass::_preva = aa;
-  PeriodCountClass::_prevb = bb;
-  PeriodCountClass::_ready = true;
+  _count = PeriodCountClass::mod_calc(a, b);
+  _preva = aa;
+  _prevb = bb;
+  _ready = true;
   uint32 nsec = millis();
   csec = nsec - osec;
   osec = nsec;
   if (csec < 10) {    // less than 10msec is too short
     setpre(8);        // set ETR prescaler to 8
-    PeriodCountClass::_psc = 6;         // 1.8MHz - 360MHz (2sec - 10msec)
-    PeriodCountClass::_arr = 65535;
-    TIMER2->regs.gen->PSC = PeriodCountClass::_psc;
-    TIMER2->regs.gen->ARR = PeriodCountClass::_arr;
+    _psc = 6;         // 1.8MHz - 360MHz (2sec - 10msec)
+    _arr = 65535;
+    TIMER2->regs.gen->PSC = _psc;
+    TIMER2->regs.gen->ARR = _arr;
     TIMER2->regs.gen->EGR |= TIMER_EGR_UG;   //reread registers.
   }
 }
