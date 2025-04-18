@@ -257,7 +257,6 @@ void low_touch_func(uint16_t x) {
       }
       fcount_mode = true;
       PeriodCount.begin(1000);
-      set_range();
     }
   } else if (item >= SEL_PWM && item <= SEL_PWMDUTY) {
     if (x < 60) {             // PWM
