@@ -1,5 +1,5 @@
 /*
- * STM32F103C8T6 Oscilloscope using a 320x240 TFT Version 1.11
+ * STM32F103C8T6 Oscilloscope using a 320x240 TFT Version 1.12
  * The max DMA sampling rates is 5.14Msps with single channel, 2.57Msps with 2 channels.
  * The max software loop sampling rates is 125ksps with 2 channels.
  * + Pulse Generator
@@ -121,6 +121,8 @@ int trigger_ad;
 const double sys_clk = (double)F_CPU;
 volatile bool wfft, wdds;
 byte time_mag = 1;  // magnify timebase: 1, 2, 5 or 10
+double compensation = 1.0;  // compensation for frequency counter
+boolean calib = false;      // calibrate flag for frequency counter
 
 #define LEFTPIN   PB13  // LEFT
 #define RIGHTPIN  PB14  // RIGHT
@@ -230,8 +232,6 @@ void DrawGrid() {
 }
 #endif
 
-//const double freq_ratio = 20000.0 / 19987.0;
-
 void fcount_disp() {
   unsigned long count;
   static double dfreq = 0.0;
@@ -241,6 +241,8 @@ void fcount_disp() {
   if (status = PeriodCount.available()) { // wait finish  restart
     count = PeriodCount.read();
     dfreq = PeriodCount.countToFrequency(count);
+    if (calib) calibrate(dfreq);
+    calib = false;
     if ((status == 1) && (dfreq > 0.001)) {     // ready
       PeriodCount.adjust(dfreq);
     } else {  // timeout
@@ -248,7 +250,8 @@ void fcount_disp() {
       PeriodCount.begin(1000);
     }
   }
-  displayfreq(dfreq);
+  double freq = dfreq * compensation;
+  displayfreq(freq);
 }
 
 void displayfreq(double freq) {
@@ -274,6 +277,19 @@ void displayfreq(double freq) {
   } else {  // below 1000Hz
     display.print(ss);
     display.print("Hz  ");
+  }
+}
+
+void calibrate(double freq) {
+  float references[] = {25e6, 24e6, 20e6, 16e6, 12e6, 10e6, 8e6, 6e6, 5e6,
+          4e6, 3e6, 2e6, 1e6, 1e5, 32768.0, 1e4, 1e3, 100.0, 10.0, 1.0};
+  int num = sizeof(references) / sizeof(float);
+  for (int i = 0; i < num; ++i) {
+    double ref = (double) references[i];
+    if ((ref * 0.99995) < freq && freq < (ref * 1.00005)) { // 50ppm
+      compensation = ref / (double) freq;
+      break;
+    }
   }
 }
 
@@ -533,7 +549,7 @@ void loop() {
       if (ch1_mode != MODE_OFF) data[1][i] = adRead(ad_ch1, ch1_mode, ch1_off, i);
       ClearAndDrawDot(i);
     }
-    DrawGrid(disp_leng);  // right side grid   
+    DrawGrid(disp_leng);  // right side grid
     // Serial.println(millis()-st0);
     digitalWrite(LED_BUILTIN, LED_OFF);
 //    DrawGrid();
@@ -782,6 +798,9 @@ void saveEEPROM() {                   // Save the setting value in EEPROM after 
       EEPROM.update(p++, ifreq & 0xffff);
       EEPROM.update(p++, (ifreq >> 16) & 0xffff);
       EEPROM.update(p++, time_mag);
+      uint16_t *q = (uint16_t *) &compensation;
+      EEPROM.update(p++, *q++); EEPROM.update(p++, *q++);
+      EEPROM.update(p++, *q++); EEPROM.update(p++, *q++);
     }
   }
 }
@@ -810,6 +829,7 @@ void set_default() {
   wave_id = 0;    // sine wave
   ifreq = 23841;  // 238.41Hz
   time_mag = 1;   // magnify timebase
+  compensation = 1.0; // frequency counter
 }
 
 extern const byte wave_num;
@@ -860,6 +880,11 @@ void loadEEPROM() { // Read setting values from EEPROM (abnormal values will be 
   *((uint16 *)&ifreq + 1) = EEPROM.read(p++); // ifreq high
   if (ifreq > 999999L) ++error;
   time_mag = EEPROM.read(p++);               // magnify timebase
+  uint16_t *q = (uint16_t *) &compensation;
+  *q++ = EEPROM.read(p++); *q++ = EEPROM.read(p++);
+  *q++ = EEPROM.read(p++); *q++ = EEPROM.read(p++);
+  if (compensation < 1.002 && compensation > 0.998) ; // OK
+  else ++error;
   if (error > 0) {
     EEPROM.format();
     set_default();

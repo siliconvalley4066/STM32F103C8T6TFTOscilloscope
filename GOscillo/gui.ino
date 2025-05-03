@@ -316,6 +316,8 @@ void low_touch_func(uint16_t x) {
       fcount_mode = false;
       PeriodCount.end();
       clear_bottom_text();                          // clear bottom text area
+    } else {
+      calib = true;
     }
   }
 }
