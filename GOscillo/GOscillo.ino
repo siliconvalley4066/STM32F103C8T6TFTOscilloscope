@@ -1,5 +1,5 @@
 /*
- * STM32F103C8T6 Oscilloscope using a 320x240 TFT Version 1.13
+ * STM32F103C8T6 Oscilloscope using a 320x240 TFT Version 1.14
  * The max DMA sampling rates is 5.14Msps with single channel, 2.57Msps with 2 channels.
  * The max software loop sampling rates is 125ksps with 2 channels.
  * + Pulse Generator
